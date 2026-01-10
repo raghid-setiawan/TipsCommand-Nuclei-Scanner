@@ -41,13 +41,13 @@ Dirancang agar **langsung siap pakai** dan mudah dimodifikasi sesuai kebutuhan.
 ## 1️⃣ Scan dari List Target + Template Tertentu + Output JSON
 
 ```bash
-nuclei -l 2.txt \
--t nuclei-templates-main \
+nuclei -l targets.txt \
+-t nuclei-templates \
 -s critical,high,medium,low \
 -es info \
 -ps 30 \
 -dr --no-mhe \
--json-export 2.json
+-json-export result.json
 ```
 
 ➜ Digunakan untuk:
@@ -61,7 +61,7 @@ nuclei -l 2.txt \
 ## 2️⃣ Scan dari List Target + Template Lokal
 
 ```bash
-nuclei -l 1.txt \
+nuclei -l targets.txt \
 -t . \
 -s critical,high,medium,low \
 -es info \
@@ -82,7 +82,7 @@ nuclei -l 1.txt \
 
 ```bash
 nuclei -u https://target.com \
--t nuclei-templates-main \
+-t nuclei-templates \
 -s critical,high,medium,low \
 -es info \
 -ps 30 \
@@ -102,7 +102,7 @@ nuclei -u https://target.com \
 
 ```bash
 subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
-| httpx -p 80,443,3000 -timeout 60 -H "User-Agent: USER_AGENT" -silent \
+| httpx -p 80,443,3000 -timeout 60 -silent \
 | nuclei -t . \
 -s critical,high,medium,low \
 -es info \
@@ -122,20 +122,19 @@ subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
 
 ## 🔍 Recon Only (Tanpa Scan Nuclei)
 
-### 1️⃣ Recon dari List Domain (Windows Example)
+### Recon dari List Domain
 
 ```bash
-C:\Users\EDWIN\Downloads>subfinder -dL terkenal.txt -silent -recursive -all -active -nW -t 11
+subfinder -dL domains.txt -silent -recursive -all -active -nW -t 11
 ```
 
 ---
 
-### 2️⃣ Recon Single Domain → Simpan Host Aktif
+### Recon Single Domain → Simpan Host Aktif
 
 ```bash
 subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
-| httpx -p 80,443,3000 -timeout 60 \
--H "User-Agent: USER_AGENT" -silent \
+| httpx -p 80,443,3000 -timeout 60 -silent \
 -o alive.txt
 ```
 
@@ -148,9 +147,9 @@ subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
 
 ## 📌 Catatan Penting
 
-- `-u`  → Scan 1 target langsung
-- `-l`  → Scan banyak target (list)
-- `-t`  → Template nuclei (folder / file)
+- `-u` → Scan 1 target langsung
+- `-l` → Scan banyak target (list)
+- `-t` → Template nuclei (folder / file)
 - `-json-export` → Cocok untuk reporting & automation
 - `-dr` → Drop response body (lebih ringan)
 - `--no-mhe` → Hindari memory heap exhaustion
@@ -160,13 +159,14 @@ subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
 ## ✨ Tips Akhir
 
 ```bash
-# Gunakan recon terlebih dahulu sebelum scan
-# Mulai dari severity rendah, naikkan bertahap
-# Gunakan template custom untuk environment spesifik
-# Simpan output JSON untuk analisa & laporan
+# Lakukan recon terlebih dahulu sebelum scanning
+# Gunakan severity bertahap sesuai kebutuhan
+# Manfaatkan template custom untuk environment spesifik
+# Simpan output JSON untuk dokumentasi & laporan
 # Selalu pastikan pengujian bersifat legal & berizin
 ```
 
 ---
 
 Happy Scanning (Authorized Only)
+
