@@ -15,6 +15,8 @@ Penulis tidak bertanggung jawab atas penyalahgunaan informasi ini.
 ## 📖 Daftar Isi
 
 - Pengenalan
+- Prerequisites
+- Strategi Pemilihan Template Nuclei
 - Nuclei Scan dari Target List
 - Nuclei Scan dengan Template Lokal
 - Nuclei Scan Single Target
@@ -22,6 +24,7 @@ Penulis tidak bertanggung jawab atas penyalahgunaan informasi ini.
 - Recon Only (Subfinder + Httpx)
 - Catatan Penting
 - Tips Akhir
+- Legal Notice
 
 ---
 
@@ -38,6 +41,81 @@ Dirancang agar **langsung siap pakai** dan mudah dimodifikasi sesuai kebutuhan.
 
 ---
 
+## 🧰 Prerequisites
+
+Pastikan tools berikut sudah terpasang dan ter-update:
+
+- nuclei
+- nuclei-templates
+- subfinder
+- httpx
+- Go >= 1.20
+
+---
+
+## 🧠 Strategi Pemilihan Template Nuclei (Disarankan)
+
+Disarankan **tidak langsung menjalankan template CVE**.
+
+Pendekatan bertahap membantu:
+- Mengurangi noise
+- Menghindari false positive
+- Menjaga stabilitas scan
+- Lebih aman terhadap WAF / rate-limit
+
+---
+
+### 1️⃣ Tahap Awal – Exposure, Misconfiguration, Exposed Panels
+
+Gunakan template ringan untuk memetakan attack surface awal.
+
+```bash
+nuclei -l/-u targets.txt \
+-t http/exposures,http/misconfiguration,http/exposed-panels \
+-s critical,high,medium,low \
+-es info \
+-ps 30 \
+-c 20 \
+-rl 30 \
+-timeout 15 \
+-dr --no-mhe \
+-retries 1 \
+-silent
+```
+
+Digunakan untuk menemukan:
+- File sensitif terbuka
+- Konfigurasi salah
+- Admin panel / dashboard terekspos
+- Endpoint menarik untuk scan lanjutan
+
+---
+
+### 2️⃣ Tahap Lanjutan – CVE Based Scanning
+
+Setelah surface awal tervalidasi, lanjutkan ke template CVE.
+
+```bash
+nuclei -l/-u targets.txt \
+-t http/cves \
+-s critical,high,medium,low \
+-es info \
+-ps 30 \
+-c 20 \
+-rl 30 \
+-timeout 15 \
+-dr --no-mhe \
+-retries 1 \
+-silent
+```
+
+Digunakan untuk:
+- Identifikasi CVE spesifik versi
+- Validasi temuan exposure sebelumnya
+- Discovery vulnerability berdampak tinggi
+
+---
+
 ## 1️⃣ Scan dari List Target + Template Tertentu + Output JSON
 
 ```bash
@@ -50,10 +128,10 @@ nuclei -l targets.txt \
 -json-export result.json
 ```
 
-➜ Digunakan untuk:
+Digunakan untuk:
 - Banyak target (list)
 - Template nuclei tertentu
-- Kebutuhan reporting (JSON)
+- Reporting berbasis JSON
 - Automation / CI / arsip hasil scan
 
 ---
@@ -71,10 +149,10 @@ nuclei -l targets.txt \
 -dr --no-mhe
 ```
 
-➜ Digunakan untuk:
-- Target list spesifik
-- Template custom / hasil modifikasi sendiri
-- Scan cepat & terkontrol
+Digunakan untuk:
+- Template custom
+- Pengujian internal
+- Kontrol penuh terhadap scope
 
 ---
 
@@ -91,10 +169,10 @@ nuclei -u https://target.com \
 -dr --no-mhe
 ```
 
-➜ Digunakan untuk:
+Digunakan untuk:
 - Single target
-- Fokus discovery vulnerability
-- Validasi manual hasil recon
+- Validasi manual
+- Proof-of-concept
 
 ---
 
@@ -113,7 +191,7 @@ subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
 -dr --no-mhe
 ```
 
-➜ Alur kerja:
+Alur:
 - Subdomain discovery
 - Validasi host aktif
 - Vulnerability scanning otomatis
@@ -138,35 +216,42 @@ subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
 -o alive.txt
 ```
 
-➜ Digunakan untuk:
-- Recon saja (tanpa vulnerability scan)
-- Menyimpan daftar host aktif
-- Tahap awal sebelum scanning lanjutan
+Digunakan untuk:
+- Recon awal
+- Menyimpan host aktif
+- Persiapan tahap scanning
 
 ---
 
 ## 📌 Catatan Penting
 
-- `-u` → Scan 1 target langsung
-- `-l` → Scan banyak target (list)
-- `-t` → Template nuclei (folder / file)
-- `-json-export` → Cocok untuk reporting & automation
-- `-dr` → Drop response body (lebih ringan)
-- `--no-mhe` → Hindari memory heap exhaustion
+- `-u` → Single target
+- `-l` → Target list
+- `-t` → Template nuclei
+- `-json-export` → Reporting & automation
+- `-dr` → Drop response body
+- `--no-mhe` → Cegah memory heap exhaustion
+- `-rl` → Rate limit
+- `-retries` → Kontrol retry request
 
 ---
 
 ## ✨ Tips Akhir
 
 ```bash
-# Lakukan recon terlebih dahulu sebelum scanning
-# Gunakan severity bertahap sesuai kebutuhan
-# Manfaatkan template custom untuk environment spesifik
-# Simpan output JSON untuk dokumentasi & laporan
-# Selalu pastikan pengujian bersifat legal & berizin
+# Lakukan recon sebelum scanning
+# Gunakan template exposure sebelum CVE
+# Atur rate-limit dan concurrency
+# Simpan output JSON untuk laporan
+# Selalu pastikan scope legal & berizin
 ```
 
 ---
 
-Happy Scanning (Authorized Only)
+## 📜 Legal Notice
+
+Tools do not make you a hacker.  
+Authorization does.
+
+Use responsibly.
 
