@@ -1,3 +1,4 @@
+
 # 🚀 Nuclei Command Tips – Direct Target & Target List (Template Specific)
 
 ## ⚠️ Ethical Disclaimer / Peringatan Penting
@@ -7,8 +8,8 @@ Repositori ini dibuat **hanya untuk tujuan pembelajaran, dokumentasi, dan riset 
 Semua command dan teknik di dalam repositori ini **WAJIB digunakan hanya pada sistem
 yang Anda miliki atau memiliki izin tertulis dari pemiliknya**.
 
-Pemindaian tanpa otorisasi adalah **tindakan ilegal**.
-Penulis tidak bertanggung jawab atas penyalahgunaan informasi ini.
+Pemindaian tanpa otorisasi merupakan **tindakan ilegal**.  
+Penulis tidak bertanggung jawab atas penyalahgunaan informasi dalam repositori ini.
 
 ---
 
@@ -16,13 +17,15 @@ Penulis tidak bertanggung jawab atas penyalahgunaan informasi ini.
 
 - Pengenalan
 - Prerequisites
-- Strategi Pemilihan Template Nuclei
-- Nuclei Scan dari Target List
-- Nuclei Scan dengan Template Lokal
-- Nuclei Scan Single Target
+- Filosofi & Strategi Scanning
+- Tahap Awal – Exposure, Misconfiguration, Exposed Panels
+- Tahap Lanjutan – CVE Based Scanning
+- Scan dari Target List + Output JSON
+- Scan dengan Template Lokal
+- Scan Single Target
 - Pipeline Recon → Scan Otomatis
-- Recon Only (Subfinder + Httpx)
-- Catatan Penting
+- Recon Only (Tanpa Nuclei)
+- Catatan Penting Parameter
 - Tips Akhir
 - Legal Notice
 
@@ -30,20 +33,24 @@ Penulis tidak bertanggung jawab atas penyalahgunaan informasi ini.
 
 ## 🎯 Pengenalan
 
-Dokumen ini berisi **tips command Nuclei** untuk:
+Dokumen ini berisi **tips dan best practice penggunaan Nuclei** untuk:
 
-- Scan vulnerability berbasis template
-- Penggunaan target tunggal atau target list
+- Vulnerability scanning berbasis template
+- Scan target tunggal (`-u`) maupun banyak target (`-l`)
 - Integrasi recon → scan otomatis
-- Kebutuhan reporting & automation
+- Automation, reporting, dan CI/CD
 
-Dirancang agar **langsung siap pakai** dan mudah dimodifikasi sesuai kebutuhan.
+Dirancang agar:
+- Langsung siap pakai
+- Mudah dimodifikasi
+- Stabil terhadap resource & WAF
+- Layak untuk bug bounty dan internal pentest
 
 ---
 
 ## 🧰 Prerequisites
 
-Pastikan tools berikut sudah terpasang dan ter-update:
+Pastikan tools berikut sudah terpasang dan versi terbaru:
 
 - nuclei
 - nuclei-templates
@@ -53,24 +60,30 @@ Pastikan tools berikut sudah terpasang dan ter-update:
 
 ---
 
-## 🧠 Strategi Pemilihan Template Nuclei (Disarankan)
+## 🧠 Filosofi & Strategi Scanning
 
-Disarankan **tidak langsung menjalankan template CVE**.
+❌ **Jangan langsung menjalankan template CVE**
 
 Pendekatan bertahap membantu:
-- Mengurangi noise
-- Menghindari false positive
+- Mengurangi noise & false positive
 - Menjaga stabilitas scan
-- Lebih aman terhadap WAF / rate-limit
+- Menghindari WAF / rate-limit
+- Fokus pada attack surface nyata
+
+**Prinsip utama:**
+
+Recon → Exposure → Validasi → CVE
 
 ---
 
-### 1️⃣ Tahap Awal – Exposure, Misconfiguration, Exposed Panels
+## 1️⃣ Tahap Awal – Exposure, Misconfiguration, Exposed Panels
 
-Gunakan template ringan untuk memetakan attack surface awal.
+Digunakan untuk **memetakan attack surface awal**.
+
+### 🔹 A. Single Target (`-u`)
 
 ```bash
-nuclei -l/-u targets.txt \
+nuclei -u https://target.com \
 -t http/exposures,http/misconfiguration,http/exposed-panels \
 -s critical,high,medium,low \
 -es info \
@@ -83,20 +96,62 @@ nuclei -l/-u targets.txt \
 -silent
 ```
 
-Digunakan untuk menemukan:
-- File sensitif terbuka
-- Konfigurasi salah
-- Admin panel / dashboard terekspos
-- Endpoint menarik untuk scan lanjutan
+Digunakan untuk:
+- Validasi manual
+- Scope kecil
+- Proof-of-concept
 
 ---
 
-### 2️⃣ Tahap Lanjutan – CVE Based Scanning
-
-Setelah surface awal tervalidasi, lanjutkan ke template CVE.
+### 🔹 B. Banyak Target dari File (`-l`)
 
 ```bash
-nuclei -l/-u targets.txt \
+nuclei -l targets.txt \
+-t http/exposures,http/misconfiguration,http/exposed-panels \
+-s critical,high,medium,low \
+-es info \
+-ps 30 \
+-c 20 \
+-rl 30 \
+-timeout 15 \
+-dr --no-mhe \
+-retries 1 \
+-silent
+```
+
+Digunakan untuk:
+- Asset besar
+- Automation
+- Recon hasil massal
+
+---
+
+## 2️⃣ Tahap Lanjutan – CVE Based Scanning
+
+⚠️ **Dijalankan SETELAH exposure tervalidasi**
+
+### 🔹 A. Single Target (`-u`)
+
+```bash
+nuclei -u https://target.com \
+-t http/cves \
+-s critical,high,medium,low \
+-es info \
+-ps 30 \
+-c 20 \
+-rl 30 \
+-timeout 15 \
+-dr --no-mhe \
+-retries 1 \
+-silent
+```
+
+---
+
+### 🔹 B. Banyak Target (`-l`)
+
+```bash
+nuclei -l targets.txt \
 -t http/cves \
 -s critical,high,medium,low \
 -es info \
@@ -111,12 +166,12 @@ nuclei -l/-u targets.txt \
 
 Digunakan untuk:
 - Identifikasi CVE spesifik versi
-- Validasi temuan exposure sebelumnya
-- Discovery vulnerability berdampak tinggi
+- Validasi temuan exposure
+- Vulnerability berdampak tinggi
 
 ---
 
-## 1️⃣ Scan dari List Target + Template Tertentu + Output JSON
+## 3️⃣ Scan dari Target List + Output JSON
 
 ```bash
 nuclei -l targets.txt \
@@ -128,15 +183,9 @@ nuclei -l targets.txt \
 -json-export result.json
 ```
 
-Digunakan untuk:
-- Banyak target (list)
-- Template nuclei tertentu
-- Reporting berbasis JSON
-- Automation / CI / arsip hasil scan
-
 ---
 
-## 2️⃣ Scan dari List Target + Template Lokal
+## 4️⃣ Scan dari Target List + Template Lokal
 
 ```bash
 nuclei -l targets.txt \
@@ -149,14 +198,9 @@ nuclei -l targets.txt \
 -dr --no-mhe
 ```
 
-Digunakan untuk:
-- Template custom
-- Pengujian internal
-- Kontrol penuh terhadap scope
-
 ---
 
-## 3️⃣ Scan 1 Target Langsung
+## 5️⃣ Scan Single Target
 
 ```bash
 nuclei -u https://target.com \
@@ -169,61 +213,75 @@ nuclei -u https://target.com \
 -dr --no-mhe
 ```
 
-Digunakan untuk:
-- Single target
-- Validasi manual
-- Proof-of-concept
+---
+
+## 6️⃣ Pipeline Recon → Scan Otomatis (Direkomendasikan)
+
+### 🔹 Step 1: Recon + Alive Host
+
+```bash
+subfinder -dL list.txt -silent -recursive -all -active -nW -t 11 \
+| httpx -p 80,443,3000,8080,8443 \
+-fc 403,404 \
+-timeout 60 \
+-retries 2 \
+-threads 50 \
+-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+-silent \
+-o targets.txt
+```
 
 ---
 
-## 4️⃣ Pipeline Recon → Scan Otomatis
+### 🔹 Step 2: Exposure Scan
 
 ```bash
-subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
-| httpx -p 80,443,3000 -timeout 60 -silent \
-| nuclei -t . \
+nuclei -l targets.txt \
+-t http/exposures,http/misconfiguration,http/exposed-panels \
 -s critical,high,medium,low \
 -es info \
 -ps 30 \
 -c 20 \
 -rl 30 \
 -timeout 15 \
--dr --no-mhe
+-dr --no-mhe \
+-silent
 ```
-
-Alur:
-- Subdomain discovery
-- Validasi host aktif
-- Vulnerability scanning otomatis
 
 ---
 
-## 🔍 Recon Only (Tanpa Scan Nuclei)
+### 🔹 Step 3: CVE Scan
 
-### Recon dari List Domain
+```bash
+nuclei -l targets.txt \
+-t http/cves \
+-s critical,high,medium \
+-es info \
+-ps 30 \
+-c 20 \
+-rl 30 \
+-timeout 15 \
+-dr --no-mhe \
+-silent
+```
+
+---
+
+## 🔍 Recon Only (Tanpa Nuclei)
 
 ```bash
 subfinder -dL domains.txt -silent -recursive -all -active -nW -t 11
 ```
 
----
-
-### Recon Single Domain → Simpan Host Aktif
-
 ```bash
 subfinder -d target.com -silent -recursive -all -active -nW -t 11 \
-| httpx -p 80,443,3000 -timeout 60 -silent \
+| httpx -p 80,443,3000,8080,8443 -silent \
 -o alive.txt
 ```
 
-Digunakan untuk:
-- Recon awal
-- Menyimpan host aktif
-- Persiapan tahap scanning
-
 ---
 
-## 📌 Catatan Penting
+## 📌 Catatan Penting Parameter
 
 - `-u` → Single target
 - `-l` → Target list
@@ -240,10 +298,10 @@ Digunakan untuk:
 
 ```bash
 # Lakukan recon sebelum scanning
-# Gunakan template exposure sebelum CVE
+# Jalankan exposure sebelum CVE
 # Atur rate-limit dan concurrency
 # Simpan output JSON untuk laporan
-# Selalu pastikan scope legal & berizin
+# Selalu pastikan scope legal dan berizin
 ```
 
 ---
@@ -254,4 +312,5 @@ Tools do not make you a hacker.
 Authorization does.
 
 Use responsibly.
+
 
